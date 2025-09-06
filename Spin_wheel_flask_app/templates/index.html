@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spin the Wheel</title>
+    <style>
+        canvas {
+            border: 2px solid #000;
+            display: block;
+            margin: 20px auto;
+        }
+        #spinButton {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            font-size: 18px;
+        }
+        #result {
+            text-align: center;
+            font-size: 24px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="wheelCanvas" width="500" height="500"></canvas>
+<button id="spinButton">Spin the Wheel</button>
+<div id="result"></div>
+
+<script>
+    const n = {{ n }};  // Number of wedges from Flask
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const radius = canvas.width / 2;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    const wedgeAngle = 2 * Math.PI / n;
+    let angle = 0;
+    let spinning = false;
+
+    function drawWheel() {
+        for (let i = 0; i < n; i++) {
+            const startAngle = angle + i * wedgeAngle;
+            const endAngle = startAngle + wedgeAngle;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.fillStyle = i % 2 === 0 ? '#f39c12' : '#e67e22';
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw the number
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(startAngle + wedgeAngle / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 20px sans-serif";
+            ctx.fillText(i + 1, radius - 10, 10);
+            ctx.restore();
+        }
+
+        // Draw arrow
+        ctx.beginPath();
+        ctx.moveTo(centerX - 10, centerY + radius + 10);
+        ctx.lineTo(centerX + 10, centerY + radius + 10);
+        ctx.lineTo(centerX, centerY + radius - 20);
+        ctx.closePath();
+        ctx.fillStyle = 'red';
+        ctx.fill();
+    }
+
+    function spinWheel() {
+        if (spinning) return;
+        spinning = true;
+        const duration = Math.random() * 0 + 1; // Between 5 and 10 seconds
+        const spins = Math.random() * 100 + 100; // Random spin amount
+
+        let start = null;
+        const initialAngle = angle;
+
+        function animate(timestamp) {
+            if (!start) start = timestamp;
+            const elapsed = (timestamp - start) / 1000;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeOut = 1 - Math.pow(1 - progress, 3); // Ease-out cubic
+
+            angle = initialAngle + spins * easeOut;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawWheel();
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                spinning = false;
+                showResult();
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    //function showResult() {
+    //    const normalizedAngle = angle % (2 * Math.PI);
+    //    //const index = Math.floor(n - (normalizedAngle / wedgeAngle)) % n;
+    //    const index = Math.floor((normalizedAngle / wedgeAngle)) % n;
+    //    const result = normalizedAngle//index + 1;
+    //    document.getElementById('result').innerText = `Result: ${result}`;
+    //}
+
+    function showResult() {
+        const fullCircle = 2 * Math.PI;
+        const normalizedAngle = (angle + Math.PI / 2) % fullCircle;
+
+        // Determine wedge index
+        const index = Math.floor((n - (normalizedAngle / wedgeAngle)) % n);
+        const result = ((index + n + n/2) % n) + 1;  // Ensure result is between 1 and n
+
+        document.getElementById('result').innerText = `Result: ${result}`;
+    }
+
+    document.getElementById('spinButton').addEventListener('click', spinWheel);
+
+    // Initial draw
+    drawWheel();
+</script>
+</body>
+</html>
