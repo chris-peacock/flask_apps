@@ -20,6 +20,21 @@
             font-size: 24px;
             margin-top: 20px;
         }
+
+        .names-list {
+            margin-top: 20px;
+        }
+        .name-entry {
+            margin: 5px 0;
+        }
+        form textarea {
+            width: 300px;
+            height: 100px;
+            font-size: 16px;
+        }
+        form button {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -28,103 +43,112 @@
 <button id="spinButton">Spin the Wheel</button>
 <div id="result"></div>
 
-<script>
-    const n = {{ n }};  // Number of wedges from Flask
-    const canvas = document.getElementById('wheelCanvas');
-    const ctx = canvas.getContext('2d');
-    const radius = canvas.width / 2;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+{% if not names %}
+    <form method="post">
+        <p>Enter names (comma or newline separated):</p>
+        <textarea name="names" placeholder="Alice, Bob, Charlie..."></textarea><br>
+        <button type="submit">Create Wheel</button>
+        {% if error %}
+            <p style="color:red;">{{ error }}</p>
+        {% endif %}
+    </form>
+{% else %}
+    <script>
+        const names = {{ names|tojson }};
+        const n = names.length;
+        //const n = {{ n }};  // Number of wedges from Flask
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const radius = canvas.width / 2;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
 
-    const wedgeAngle = 2 * Math.PI / n;
-    let angle = 0;
-    let spinning = false;
+        const wedgeAngle = 2 * Math.PI / n;
+        let angle = 0;
+        let spinning = false;
 
-    function drawWheel() {
-        for (let i = 0; i < n; i++) {
-            const startAngle = angle + i * wedgeAngle;
-            const endAngle = startAngle + wedgeAngle;
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-            ctx.fillStyle = i % 2 === 0 ? '#f39c12' : '#e67e22';
-            ctx.fill();
-            ctx.stroke();
+        function drawWheel() {
+            for (let i = 0; i < n; i++) {
+                const startAngle = angle + i * wedgeAngle;
+                const endAngle = startAngle + wedgeAngle;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.fillStyle = i % 2 === 0 ? '#f39c12' : '#e67e22';
+                ctx.fill();
+                ctx.stroke();
 
-            // Draw the number
-            ctx.save();
-            ctx.translate(centerX, centerY);
-            ctx.rotate(startAngle + wedgeAngle / 2);
-            ctx.textAlign = "right";
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 20px sans-serif";
-            ctx.fillText(i + 1, radius - 10, 10);
-            ctx.restore();
-        }
-
-        // Draw arrow
-        ctx.beginPath();
-        ctx.moveTo(centerX - 10, centerY + radius + 10);
-        ctx.lineTo(centerX + 10, centerY + radius + 10);
-        ctx.lineTo(centerX, centerY + radius - 20);
-        ctx.closePath();
-        ctx.fillStyle = 'red';
-        ctx.fill();
-    }
-
-    function spinWheel() {
-        if (spinning) return;
-        spinning = true;
-        const duration = Math.random() * 0 + 1; // Between 5 and 10 seconds
-        const spins = Math.random() * 100 + 100; // Random spin amount
-
-        let start = null;
-        const initialAngle = angle;
-
-        function animate(timestamp) {
-            if (!start) start = timestamp;
-            const elapsed = (timestamp - start) / 1000;
-            const progress = Math.min(elapsed / duration, 1);
-            const easeOut = 1 - Math.pow(1 - progress, 3); // Ease-out cubic
-
-            angle = initialAngle + spins * easeOut;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawWheel();
-
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                spinning = false;
-                showResult();
+                // Draw the number
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + wedgeAngle / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 20px sans-serif";
+                //ctx.fillText(i + 1, radius - 10, 10);
+                ctx.fillText(names[i], radius - 10, 10);
+                ctx.restore();
             }
+
+            // Draw arrow
+            ctx.beginPath();
+            ctx.moveTo(centerX - 10, centerY + radius + 10);
+            ctx.lineTo(centerX + 10, centerY + radius + 10);
+            ctx.lineTo(centerX, centerY + radius - 20);
+            ctx.closePath();
+            ctx.fillStyle = 'red';
+            ctx.fill();
         }
 
-        requestAnimationFrame(animate);
-    }
+        function spinWheel() {
+            if (spinning) return;
+            spinning = true;
+            const duration = Math.random() * 0 + 3; // Between 5 and 10 seconds
+            const spins = Math.random() * 100 + 100; // Random spin amount
 
-    //function showResult() {
-    //    const normalizedAngle = angle % (2 * Math.PI);
-    //    //const index = Math.floor(n - (normalizedAngle / wedgeAngle)) % n;
-    //    const index = Math.floor((normalizedAngle / wedgeAngle)) % n;
-    //    const result = normalizedAngle//index + 1;
-    //    document.getElementById('result').innerText = `Result: ${result}`;
-    //}
+            let start = null;
+            const initialAngle = angle;
 
-    function showResult() {
-        const fullCircle = 2 * Math.PI;
-        const normalizedAngle = (angle + Math.PI / 2) % fullCircle;
+            function animate(timestamp) {
+                if (!start) start = timestamp;
+                const elapsed = (timestamp - start) / 1000;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3); // Ease-out cubic
 
-        // Determine wedge index
-        const index = Math.floor((n - (normalizedAngle / wedgeAngle)) % n);
-        const result = ((index + n + n/2) % n) + 1;  // Ensure result is between 1 and n
+                angle = initialAngle + spins * easeOut;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawWheel();
 
-        document.getElementById('result').innerText = `Result: ${result}`;
-    }
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    spinning = false;
+                    showResult();
+                }
+            }
 
-    document.getElementById('spinButton').addEventListener('click', spinWheel);
+            requestAnimationFrame(animate);
+        }
 
-    // Initial draw
-    drawWheel();
-</script>
+        function showResult() {
+            const fullCircle = 2 * Math.PI;
+            const normalizedAngle = (angle + 3*Math.PI / 2) % fullCircle;
+            //const normalizedAngle = (angle) % fullCircle;
+
+            // Determine wedge index
+            const index = Math.floor((n - (normalizedAngle / wedgeAngle)) % n);
+            //const fixedIndex = ((index + n + n/2) % n) ;  // Ensure result is between 1 and n
+            const fixedIndex = ((index + n) % n) ;  // Ensure result is between 1 and n
+            const selectedName = names[fixedIndex];
+
+            document.getElementById('result').innerText = `Result: ${selectedName}`;
+        }
+
+        document.getElementById('spinButton').addEventListener('click', spinWheel);
+
+        // Initial draw
+        drawWheel();
+    </script>
+{% endif %}
 </body>
 </html>
